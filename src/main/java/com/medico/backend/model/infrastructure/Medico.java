@@ -1,5 +1,6 @@
-package com.medico.backend.model;
+package com.medico.backend.model.infrastructure;
 
+import com.medico.backend.model.core.Usuario;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

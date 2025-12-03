@@ -1,4 +1,4 @@
-package com.medico.backend.model;
+package com.medico.backend.model.infrastructure;
 
 import jakarta.persistence.*;
 import lombok.Data;

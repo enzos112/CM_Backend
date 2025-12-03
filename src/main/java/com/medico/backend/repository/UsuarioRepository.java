@@ -1,6 +1,6 @@
 package com.medico.backend.repository;
 
-import com.medico.backend.model.Usuario;
+import com.medico.backend.model.core.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 

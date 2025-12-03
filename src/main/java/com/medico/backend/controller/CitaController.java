@@ -2,7 +2,7 @@ package com.medico.backend.controller;
 
 import com.medico.backend.dto.request.CitaRequest;
 import com.medico.backend.dto.response.CitaResponse;
-import com.medico.backend.model.Cita;
+import com.medico.backend.model.administrative.Cita;
 import com.medico.backend.service.CitaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

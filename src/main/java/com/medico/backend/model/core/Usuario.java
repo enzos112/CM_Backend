@@ -1,10 +1,11 @@
-package com.medico.backend.model;
+package com.medico.backend.model.core;
 
+import com.medico.backend.model.security.Rol;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.util.Set;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
