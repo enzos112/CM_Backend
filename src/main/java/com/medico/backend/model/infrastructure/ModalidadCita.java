@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "especialidades")
-public class Especialidad {
+@Table(name = "modalidades_cita")
+public class ModalidadCita {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer idEspecialidad;
+    private Integer idModalidad;
 
-    @Column(length = 100, nullable = false)
+    @Column(unique = true, length = 50)
     private String nombre;
 
     private String descripcion;
-    private String iconoUrl;
+    private boolean activo;
 }

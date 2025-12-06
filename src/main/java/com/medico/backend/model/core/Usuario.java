@@ -1,110 +1,97 @@
 package com.medico.backend.model.core;
 
-import com.medico.backend.model.security.Rol;
+import com.medico.backend.model.privat.UsuarioRol;
+import com.medico.backend.util.GeneradorCodigo;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import java.time.LocalDateTime;
-
+import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "usuarios")
 public class Usuario implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id_usuario")
+    private Integer idUsuario;
 
-    @Email(message = "El formato del correo es inválido")
-    @NotBlank(message = "El correo es obligatorio")
-    @Column(unique = true, nullable = false)
+    // Código público (Ej: US-482-X9J2M)
+    @Column(unique = true, nullable = false, length = 20)
+    private String codigo;
+
+    @Column(unique = true, nullable = false, length = 100)
     private String email;
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    // Mínimo 8 caracteres, al menos 1 mayúscula y 1 número
-    @Pattern(regexp = "^(?=.*[0-9])(?=.*[A-Z]).{8,}$",
-            message = "La contraseña debe tener al menos 8 caracteres, una mayúscula y un número")
+    @Column(name = "password_hash", nullable = false)
     private String password;
 
-    // --- Datos Personales ---
+    @Column(name = "fecha_registro")
+    private LocalDateTime fechaRegistro;
 
-    @NotBlank
-    @Pattern(regexp = "^[A-Z0-9]+$", message = "El tipo de documento debe ser DNI, CE o PASAPORTE")
-    private String tipoDocumento; // DNI, PASAPORTE
+    @Column(name = "estado_cuenta", length = 20)
+    private String estadoCuenta;
 
-    @NotBlank
-    @Size(min = 8, max = 12, message = "El documento debe tener entre 8 y 12 caracteres")
-    @Column(unique = true, nullable = false)
-    private String numeroDocumento;
+    @Column(name = "ultimo_login")
+    private LocalDateTime ultimoLogin;
 
-    @NotBlank
-    // Validación: Solo letras y espacios, y NO permite 4 consonantes seguidas (evita nombres falsos como 'Hjlmp')
-    @Pattern(regexp = "^(?!.*[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]{4})[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$",
-            message = "El nombre contiene caracteres inválidos o demasiadas consonantes seguidas")
-    private String nombres;
-
-    @NotBlank
-    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El apellido paterno solo puede contener letras")
-    private String apellidoPaterno;
-
-    @NotBlank
-    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El apellido materno solo puede contener letras")
-    private String apellidoMaterno;
-
-    @NotBlank
-    // Empieza con 9 y tiene 9 dígitos en total
-    @Pattern(regexp = "^9\\d{8}$", message = "El teléfono debe ser un celular válido de Perú (9 dígitos)")
-    private String telefono;
-
-    // --- Ubicación ---
-    private String direccion;
-
-    // Guardaremos el ID del distrito seleccionado en el frontend
-    private Integer distritoId;
-
-    // --- Seguridad de Cuenta ---
-    @Enumerated(EnumType.STRING)
-    private Rol rol; // PACIENTE, MEDICO, ADMIN
-
-    private Integer intentosLogin = 0;
-    private Boolean cuentaBloqueada = false;
-
-    @Column(updatable = false)
-    private LocalDateTime fechaCreacion;
+    // RELACIÓN: Un Usuario tiene muchos registros en UsuarioRol
+    // Fetch EAGER es obligatorio para Login (cargar roles al iniciar sesión)
+    @Builder.Default
+    @OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    private List<UsuarioRol> usuarioRoles = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
-        this.fechaCreacion = LocalDateTime.now();
-        if (this.rol == null) this.rol = Rol.PACIENTE;
+        this.fechaRegistro = LocalDateTime.now();
+        if (this.estadoCuenta == null) this.estadoCuenta = "ACTIVO";
 
+        if (this.codigo == null) {
+            this.codigo = GeneradorCodigo.generarCodigo("US");
+            this.codigo = "US-" + System.currentTimeMillis();
+        }
     }
+
+    // --- MÉTODOS OBLIGATORIOS DE SPRING SECURITY ---
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Convierte tu ROL en un permiso que Spring entienda
-        if (rol == null) return List.of(new SimpleGrantedAuthority("ROLE_PACIENTE"));
-        return List.of(new SimpleGrantedAuthority("ROLE_" + rol.name()));
+        if (usuarioRoles == null) return List.of();
+
+        // Navegamos: Usuario -> UsuarioRol -> Rol -> nombreRol
+        return usuarioRoles.stream()
+                .map(ur -> new SimpleGrantedAuthority(ur.getRol().getNombreRol()))
+                .collect(Collectors.toList());
     }
 
     @Override
     public String getUsername() {
-        return email; // Usamos el email para el login
+        return email;
     }
 
     @Override
     public boolean isAccountNonExpired() { return true; }
 
     @Override
-    public boolean isAccountNonLocked() { return !Boolean.TRUE.equals(cuentaBloqueada); }
+    public boolean isAccountNonLocked() { return !"BLOQUEADO".equals(estadoCuenta); }
 
     @Override
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() { return !"INACTIVO".equals(estadoCuenta); }
 }

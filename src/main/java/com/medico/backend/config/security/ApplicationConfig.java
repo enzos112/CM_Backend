@@ -21,8 +21,19 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> usuarioRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        return identifier -> {
+            // Lógica Híbrida: DNI o Email
+
+            // 1. Si es numérico y tiene entre 8 y 12 dígitos, asumimos DNI/Documento
+            if (identifier.matches("^\\d{8,12}$")) {
+                return usuarioRepository.findByDni(identifier)
+                        .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con DNI: " + identifier));
+            }
+
+            // 2. Si no, buscamos por Email (Para Admins o login tradicional)
+            return usuarioRepository.findByEmail(identifier)
+                    .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con Email: " + identifier));
+        };
     }
 
     @Bean

@@ -1,15 +1,16 @@
 package com.medico.backend.repository;
 
 import com.medico.backend.model.core.Usuario;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
-public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+public interface UsuarioRepository extends IGenericRepository<Usuario, Integer> {
 
     Optional<Usuario> findByEmail(String email);
 
-    // Métodos auxiliares para validar el Registro (evitar duplicados)
-    boolean existsByEmail(String email);
-
-    boolean existsByNumeroDocumento(String numeroDocumento);
+    // NUEVO: Busca el usuario a través de la tabla Personas
+    // "Selecciona el usuario 'u' desde la entidad Persona 'p' donde su documento sea :dni"
+    @Query("SELECT p.usuario FROM Persona p WHERE p.numeroDocumento = :dni")
+    Optional<Usuario> findByDni(@Param("dni") String dni);
 }

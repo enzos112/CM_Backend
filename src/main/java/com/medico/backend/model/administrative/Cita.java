@@ -1,65 +1,71 @@
 package com.medico.backend.model.administrative;
 
-import com.medico.backend.model.ModalidadCita;
-import com.medico.backend.model.core.Usuario;
+import com.medico.backend.model.core.Persona;
+import com.medico.backend.model.infrastructure.Especialidad;
 import com.medico.backend.model.infrastructure.Medico;
+import com.medico.backend.model.infrastructure.ModalidadCita;
+import com.medico.backend.model.infrastructure.Tarifa;
+// import com.medico.backend.util.GeneradorCodigo; // Descomenta si tienes la clase
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import java.math.BigDecimal;
+import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "citas")
 public class Cita {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer idCita;
+
+    @Column(unique = true, nullable = false, length = 20)
+    private String codigo;
 
     @ManyToOne
-    @JoinColumn(name = "usuario_paciente_id")
-    private Usuario usuarioPaciente; // Quien hace la reserva (Dueño de la cuenta)
+    @JoinColumn(name = "id_persona_paciente", nullable = false)
+    private Persona paciente;
 
     @ManyToOne
-    @JoinColumn(name = "medico_id")
+    @JoinColumn(name = "id_medico", nullable = false)
     private Medico medico;
 
-    @NotNull
-    private LocalDateTime fechaHora;
+    @ManyToOne
+    @JoinColumn(name = "id_especialidad")
+    private Especialidad especialidad;
 
-    @Enumerated(EnumType.STRING)
-    private ModalidadCita modalidad; // PRESENCIAL, VIRTUAL, DOMICILIO
+    @ManyToOne
+    @JoinColumn(name = "id_tarifa")
+    private Tarifa tarifa; // Puede ser null inicialmente si no hay pago previo
 
-    private String estado; // PROGRAMADA, FINALIZADA, CANCELADA
-    private String linkReunion; // Para Zoom/Meet
+    @ManyToOne
+    @JoinColumn(name = "id_modalidad", nullable = false)
+    private ModalidadCita modalidad;
 
-    // --- Datos para "Cita para otra persona" ---
-    // Si es false, se usan los datos de usuarioPaciente.
-    // Si es true, se usan los datos de abajo.
-    private boolean esParaTercero;
+    private LocalDateTime fechaHoraInicio;
+    private LocalDateTime fechaHoraFin;
 
-    private String pacienteNombre;
-    private String pacienteDni;
-    private String pacienteTelefono;
+    @Column(length = 20)
+    private String estado; // PENDIENTE, PAGADO, FINALIZADO
 
-    // --- Información Médica (Triage) ---
-    private BigDecimal peso;
-    private BigDecimal altura;
-    private String motivoConsulta;
+    private String motivoConsultaPaciente;
+    private String linkReunion;
+    private String origenReserva;
 
-    @Column(length = 500)
-    private String alergias;
-
-    @Column(length = 1000)
-    private String antecedentes;
-
-    private LocalDateTime fechaCreacion;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.fechaCreacion = LocalDateTime.now();
-        if (this.estado == null) this.estado = "PROGRAMADA";
+        this.createdAt = LocalDateTime.now();
+        if (this.codigo == null) this.codigo = "CT-" + System.currentTimeMillis();
     }
+
+    @PreUpdate
+    protected void onUpdate() { this.updatedAt = LocalDateTime.now(); }
 }

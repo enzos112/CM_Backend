@@ -3,7 +3,7 @@ package com.medico.backend.controller;
 import com.medico.backend.dto.response.AuthResponse;
 import com.medico.backend.dto.request.LoginRequest;
 import com.medico.backend.dto.request.RegisterRequest;
-import com.medico.backend.service.AuthService;
+import com.medico.backend.service.implementation.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

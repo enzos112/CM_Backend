@@ -7,17 +7,13 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 public class CitaResponse {
-    private Long id;
+    private Long id; // Usamos Long para flexibilidad en el frontend, aunque la BD sea Integer
     private LocalDateTime fechaHora;
     private String modalidad;
     private String estado;
-
-    // Datos procesados (Más fáciles de leer para el Frontend)
     private String nombreMedico;
     private String especialidad;
     private String nombrePaciente;
     private String dniPaciente;
-
-    // Links (útil para cuando integres S3)
     private String linkReunion;
 }

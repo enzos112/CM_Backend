@@ -1,22 +1,30 @@
 package com.medico.backend.repository;
 
 import com.medico.backend.model.administrative.Cita;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.medico.backend.model.core.Persona;
+import com.medico.backend.model.infrastructure.Medico;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface CitaRepository extends JpaRepository<Cita, Long> {
+public interface CitaRepository extends IGenericRepository<Cita, Integer> {
 
-    // Validar si el médico ya tiene una cita ACTIVA (no cancelada) en esa fecha y hora
-    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
-            "FROM Cita c WHERE c.medico.id = :medicoId " +
-            "AND c.fechaHora = :fechaHora " +
-            "AND c.estado != 'CANCELADA'")
-    boolean existsByMedicoAndFechaHora(@Param("medicoId") Long medicoId,
-                                       @Param("fechaHora") LocalDateTime fechaHora);
+    // Método 1: Validación rápida para evitar doble agendamiento al guardar
+    boolean existsByMedicoAndFechaHoraInicio(Medico medico, LocalDateTime fechaHoraInicio);
 
-    // Listar citas de un paciente específico
-    List<Cita> findByUsuarioPacienteId(Long pacienteId);
+    // Método 2: Para pintar la grilla en el Frontend (Trae las horas ocupadas)
+    // Filtramos para no traer citas que hayan sido CANCELADAS
+    @Query("SELECT c.fechaHoraInicio FROM Cita c " +
+            "WHERE c.medico.idMedico = :medicoId " +
+            "AND c.fechaHoraInicio BETWEEN :inicio AND :fin " +
+            "AND c.estado != 'CANCELADO'")
+    List<LocalDateTime> findHorasOcupadas(
+            @Param("medicoId") Integer medicoId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin
+    );
+
+    // Listar historial de un paciente
+    List<Cita> findByPaciente(Persona paciente);
 }

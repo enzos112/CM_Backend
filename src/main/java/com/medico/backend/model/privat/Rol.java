@@ -1,4 +1,4 @@
-package com.medico.backend.model.infrastructure;
+package com.medico.backend.model.privat;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,15 +11,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "especialidades")
-public class Especialidad {
+@Table(name = "roles")
+public class Rol {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer idEspecialidad;
+    @Column(name = "id_rol")
+    private Integer idRol;
 
-    @Column(length = 100, nullable = false)
-    private String nombre;
+    @Column(name = "nombre_rol", unique = true, length = 50, nullable = false)
+    private String nombreRol;
 
     private String descripcion;
-    private String iconoUrl;
 }
