@@ -55,4 +55,14 @@ public interface CitaRepository extends IGenericRepository<Cita, Integer> {
             "GROUP BY m.idMedico " +
             "ORDER BY COUNT(c) DESC")
     List<Object[]> encontrarTopMedicos(Pageable pageable);
+
+    // REPORTE 4: Top Especialidades (Mapa de Calor)
+    // Navegamos Cita -> Medico -> Especialidad -> nombre
+    @Query("SELECT c.medico.especialidad.nombre, COUNT(c) " +
+            "FROM Cita c GROUP BY c.medico.especialidad.nombre " +
+            "ORDER BY COUNT(c) DESC")
+    List<Object[]> contarCitasPorEspecialidad();
+
+    // REPORTE 6 (KPI): Métodos auxiliares para contar
+    long countByEstado(String estado); // Cuenta citas por estado exacto
 }
