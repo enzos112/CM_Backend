@@ -1,5 +1,6 @@
 package com.medico.backend.model.privat;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.medico.backend.model.core.Usuario;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,7 @@ public class UsuarioRol {
 
     @ManyToOne
     @JoinColumn(name = "id_usuario", nullable = false)
+    @JsonIgnore
     private Usuario usuario;
 
     @ManyToOne
