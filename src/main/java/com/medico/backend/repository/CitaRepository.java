@@ -5,16 +5,16 @@ import com.medico.backend.model.core.Persona;
 import com.medico.backend.model.infrastructure.Medico;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public interface CitaRepository extends IGenericRepository<Cita, Integer> {
 
-    // Método 1: Validación rápida para evitar doble agendamiento al guardar
+    // --- MÉTODOS COMPARTIDOS / TUYOS ---
     boolean existsByMedicoAndFechaHoraInicio(Medico medico, LocalDateTime fechaHoraInicio);
 
-    // Método 2: Para pintar la grilla en el Frontend (Trae las horas ocupadas)
-    // Filtramos para no traer citas que hayan sido CANCELADAS
     @Query("SELECT c.fechaHoraInicio FROM Cita c " +
             "WHERE c.medico.idMedico = :medicoId " +
             "AND c.fechaHoraInicio BETWEEN :inicio AND :fin " +
@@ -25,11 +25,19 @@ public interface CitaRepository extends IGenericRepository<Cita, Integer> {
             @Param("fin") LocalDateTime fin
     );
 
-    // Listar historial de un paciente
     List<Cita> findByPaciente(Persona paciente);
 
-    // --- NUEVO: AGENDA DEL MÉDICO ---
-    // Busca citas de un médico específico en un rango de tiempo, ordenadas por hora.
+    // --- MÉTODOS DE TU COMPAÑERA (DASHBOARD & PERFIL) ---
+    // Usados en MedicoDashboardController y PerfilPacienteController
+
+    @Query("SELECT c FROM Cita c WHERE c.medico.persona.usuario.email = :email AND CAST(c.fechaHoraInicio AS LocalDate) = :fecha")
+    List<Cita> findByMedicoUsuarioEmailAndFecha(@Param("email") String email, @Param("fecha") LocalDate fecha);
+
+    @Query("SELECT c FROM Cita c WHERE c.paciente.usuario.email = :email")
+    List<Cita> findByPacienteUsuarioEmail(@Param("email") String email);
+
+    // --- TUS NUEVOS MÉTODOS (AGENDA MÉDICO) ---
+    // Usado en CitaService para tu lógica de rangos
     List<Cita> findByMedicoAndFechaHoraInicioBetweenOrderByFechaHoraInicioAsc(
             Medico medico,
             LocalDateTime inicio,

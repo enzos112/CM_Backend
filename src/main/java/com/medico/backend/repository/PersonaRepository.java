@@ -4,7 +4,6 @@ import com.medico.backend.model.core.Persona;
 import com.medico.backend.model.core.Usuario;
 import java.util.Optional;
 
-// CAMBIO: Hereda de IGenericRepository
 public interface PersonaRepository extends IGenericRepository<Persona, Integer> {
 
     // Buscar persona por su usuario (Para el Login/Perfil)
@@ -12,4 +11,8 @@ public interface PersonaRepository extends IGenericRepository<Persona, Integer> 
 
     // Validar si el DNI ya existe
     boolean existsByNumeroDocumento(String numeroDocumento);
+
+
+    Optional<Persona> findByUsuarioEmail(String email);
+
 }
