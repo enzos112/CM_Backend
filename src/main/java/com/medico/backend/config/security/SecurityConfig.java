@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity; // Importante
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -33,21 +33,22 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. ZONA PÚBLICA (Login, Registro, Catálogos para los selects)
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/catalogo/**").permitAll()
+                        // 1. PÚBLICO
+                        .requestMatchers("/auth/**", "/catalogo/**").permitAll()
 
-                        // 2. ZONA PACIENTE (Agendar Citas, Ver mis citas)
-                        // 'hasAnyAuthority' permite listar quiénes pueden entrar
+                        // 2. REGLAS DE CITAS Y MÉDICO
+                        .requestMatchers("/citas/agenda-medico").hasAnyAuthority("MEDICO", "ADMIN")
+                        .requestMatchers("/citas/horarios-ocupados").hasAnyAuthority("PACIENTE", "MEDICO", "ADMIN")
                         .requestMatchers("/citas/**").hasAnyAuthority("PACIENTE", "ADMIN")
 
-                        // 3. ZONA MÉDICO (Intranet Médica - Futuro)
-                        .requestMatchers("/medico/**").hasAnyAuthority("MEDICO", "ADMIN")
+                        // 3. NUEVAS REGLAS DE SOLICITUDES DE CANCELACIÓN
+                        .requestMatchers("/solicitudes/crear").hasAnyAuthority("PACIENTE")
+                        .requestMatchers("/solicitudes/pendientes", "/solicitudes/*/resolver").hasAnyAuthority("MEDICO", "ADMIN")
 
-                        // 4. ZONA ADMIN (Gestión Total - Futuro)
+                        // 4. GENERALES
+                        .requestMatchers("/medico/**").hasAnyAuthority("MEDICO", "ADMIN")
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
 
-                        // Cualquier otra cosa requiere estar logueado como mínimo
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess

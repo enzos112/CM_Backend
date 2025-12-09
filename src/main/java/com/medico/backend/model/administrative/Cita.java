@@ -73,6 +73,10 @@ public class Cita {
         if (this.codigo == null) this.codigo = "CT-" + System.currentTimeMillis();
     }
 
+    // RELACIÓN INVERSA CON SOLICITUD
+    @OneToOne(mappedBy = "cita", fetch = FetchType.LAZY)
+    private SolicitudCancelacion solicitudCancelacion;
+
     @PreUpdate
     protected void onUpdate() { this.updatedAt = LocalDateTime.now(); }
 }

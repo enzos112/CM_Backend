@@ -28,9 +28,11 @@ public interface CitaRepository extends IGenericRepository<Cita, Integer> {
     // Listar historial de un paciente
     List<Cita> findByPaciente(Persona paciente);
 
-    // NUEVO: Buscar citas de un médico en un rango (Agenda del Día)
-    // Usaremos esto para filtrar "HOY" (00:00 a 23:59)
+    // --- NUEVO: AGENDA DEL MÉDICO ---
+    // Busca citas de un médico específico en un rango de tiempo, ordenadas por hora.
     List<Cita> findByMedicoAndFechaHoraInicioBetweenOrderByFechaHoraInicioAsc(
-            Medico medico, LocalDateTime start, LocalDateTime end
+            Medico medico,
+            LocalDateTime inicio,
+            LocalDateTime fin
     );
 }

@@ -33,30 +33,24 @@ public class CitaController {
         return ResponseEntity.ok(citaService.listarMisCitas());
     }
 
-    @GetMapping("/agenda-medico") // Endpoint protegido para rol MEDICO
-    public ResponseEntity<List<CitaResponse>> verAgendaMedico() {
-        return ResponseEntity.ok(citaService.listarAgendaMedicoDelDia());
+    @GetMapping("/agenda-medico")
+    public ResponseEntity<List<CitaResponse>> verAgendaMedico(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        if (fecha == null) fecha = LocalDate.now();
+        return ResponseEntity.ok(citaService.listarAgendaMedico(fecha));
     }
 
-    // --- NUEVO ENDPOINT PARA LA GRILLA DE HORARIOS ---
     @GetMapping("/horarios-ocupados")
     public ResponseEntity<List<String>> obtenerHorariosOcupados(
             @RequestParam Integer medicoId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
-
-        // 1. Definimos el rango del día completo (00:00 a 23:59)
         LocalDateTime inicio = fecha.atStartOfDay();
         LocalDateTime fin = fecha.atTime(LocalTime.MAX);
-
-        // 2. Consultamos a la BD
         List<LocalDateTime> citas = citaRepository.findHorasOcupadas(medicoId, inicio, fin);
-
-        // 3. Convertimos las fechas completas a solo hora "HH:mm" (Ej: "10:30")
-        // Esto facilita la comparación en el Frontend
         List<String> horasOcupadas = citas.stream()
                 .map(fechaHora -> fechaHora.toLocalTime().toString().substring(0, 5))
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(horasOcupadas);
     }
+
 }
