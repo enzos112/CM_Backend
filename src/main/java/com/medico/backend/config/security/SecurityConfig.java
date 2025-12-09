@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity; // Importante
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -13,10 +15,12 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -26,10 +30,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // <--- 1. ACTIVAMOS CORS AQUÍ
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // 1. ZONA PÚBLICA (Login, Registro, Catálogos para los selects)
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/catalogo/**").permitAll()
+
+                        // 2. ZONA PACIENTE (Agendar Citas, Ver mis citas)
+                        // 'hasAnyAuthority' permite listar quiénes pueden entrar
+                        .requestMatchers("/citas/**").hasAnyAuthority("PACIENTE", "ADMIN")
+
+                        // 3. ZONA MÉDICO (Intranet Médica - Futuro)
+                        .requestMatchers("/medico/**").hasAnyAuthority("MEDICO", "ADMIN")
+
+                        // 4. ZONA ADMIN (Gestión Total - Futuro)
+                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
+
+                        // Cualquier otra cosa requiere estar logueado como mínimo
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess
@@ -41,21 +59,12 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 2. DEFINIMOS LA CONFIGURACIÓN (Quién puede entrar)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // Permitir el origen del Frontend (Angular)
         configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-
-        // Permitir todos los métodos HTTP (GET, POST, PUT, DELETE, etc.)
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // Permitir todos los encabezados (Authorization, Content-Type, etc.)
-        configuration.setAllowedHeaders(List.of("*"));
-
-        // Permitir credenciales (cookies, auth headers)
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
