@@ -15,5 +15,8 @@ public interface MedicoRepository extends IGenericRepository<Medico, Integer> {
     // Navegamos: Medico -> Persona -> Usuario
     @Query("SELECT m FROM Medico m WHERE m.persona.usuario = :usuario")
     Optional<Medico> findByUsuario(@Param("usuario") Usuario usuario);
+    // Buscar al médico navegando por Persona -> Usuario -> Email
+    @Query("SELECT m FROM Medico m WHERE m.persona.usuario.email = :email")
+    Optional<Medico> findByUsuarioEmail(@Param("email") String email);
 
 }
