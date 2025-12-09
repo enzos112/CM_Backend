@@ -33,6 +33,11 @@ public class CitaController {
         return ResponseEntity.ok(citaService.listarMisCitas());
     }
 
+    @GetMapping("/agenda-medico") // Endpoint protegido para rol MEDICO
+    public ResponseEntity<List<CitaResponse>> verAgendaMedico() {
+        return ResponseEntity.ok(citaService.listarAgendaMedicoDelDia());
+    }
+
     // --- NUEVO ENDPOINT PARA LA GRILLA DE HORARIOS ---
     @GetMapping("/horarios-ocupados")
     public ResponseEntity<List<String>> obtenerHorariosOcupados(

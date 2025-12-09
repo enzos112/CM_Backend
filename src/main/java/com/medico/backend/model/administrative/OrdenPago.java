@@ -26,11 +26,9 @@ public class OrdenPago {
     @Column(unique = true, nullable = false, length = 20)
     private String codigo;
 
-    // --- CAMBIO RADICAL: RELACIÓN MANAGED ---
-    // Quitamos el Cascade ALL automático para evitar el conflicto de creación.
-    // La relación se define explícitamente como una columna FK nullable inicialmente.
-    @OneToOne
-    @JoinColumn(name = "id_comprobante_fk", nullable = true)
+    // Relación limpia con Comprobante (La que arreglamos antes)
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "comprobante_ref_id", referencedColumnName = "idComprobante")
     private ComprobanteSunat comprobante;
 
     @ManyToOne

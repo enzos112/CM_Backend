@@ -12,6 +12,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Builder
@@ -46,6 +47,12 @@ public class Cita {
     @ManyToOne
     @JoinColumn(name = "id_modalidad", nullable = false)
     private ModalidadCita modalidad;
+
+    // --- RELACIÓN INVERSA (Sin JoinColumn) ---
+    // Esto permite acceder al pago desde la cita: cita.getDetalleOrden().getOrdenPago()
+    @OneToOne(mappedBy = "cita", fetch = FetchType.LAZY)
+    @JsonIgnore // Evita error de recursión infinita si devuelves la Cita en un JSON
+    private DetalleOrden detalleOrden;
 
     private LocalDateTime fechaHoraInicio;
     private LocalDateTime fechaHoraFin;

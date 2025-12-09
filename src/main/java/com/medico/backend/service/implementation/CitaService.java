@@ -15,6 +15,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -81,7 +85,7 @@ public class CitaService extends GenericService<Cita, Integer> {
         // --- 5. Generar Orden de Pago (Transacción 2: Módulo Financiero) ---
         // Asumimos "Pago en Clínica" (PENDIENTE) por defecto, basado en la Regla de Negocio
         OrdenPago orden = ordenPagoService.generarOrdenPagoParaCita(citaGuardada, "PAGO_EN_CLINICA");
-
+        Cita citaActualizada = citaRepository.findById(citaGuardada.getIdCita()).orElse(citaGuardada);
         // OPCIONAL: Si el pago es anticipado (Modalidad VIRTUAL), el estado de la Cita cambia
         if (modalidad.getNombre().equals("VIRTUAL")) {
             // Aquí iría la lógica para procesar el pago online
@@ -108,8 +112,19 @@ public class CitaService extends GenericService<Cita, Integer> {
                 .collect(Collectors.toList());
     }
 
-    // Método auxiliar para mapear entidad a DTO response
+    // ACTUALIZACIÓN: Mapeador con nuevos campos
     private CitaResponse mapToResponse(Cita c) {
+        // Buscamos el estado de pago (si existe orden)
+        String estadoPago = "SIN_ORDEN";
+        BigDecimal precio = BigDecimal.ZERO;
+
+        if(c.getDetalleOrden() != null && c.getDetalleOrden().getOrdenPago() != null) {
+            estadoPago = c.getDetalleOrden().getOrdenPago().getEstado();
+            precio = c.getDetalleOrden().getOrdenPago().getMontoTotal();
+        } else if (c.getTarifa() != null) {
+            precio = c.getTarifa().getPrecio();
+        }
+
         return CitaResponse.builder()
                 .id(c.getIdCita().longValue())
                 .fechaHora(c.getFechaHoraInicio())
@@ -117,9 +132,30 @@ public class CitaService extends GenericService<Cita, Integer> {
                 .estado(c.getEstado())
                 .nombreMedico(c.getMedico().getPersona().getNombres() + " " + c.getMedico().getPersona().getApellidoPaterno())
                 .especialidad(c.getEspecialidad() != null ? c.getEspecialidad().getNombre() : "General")
-                .nombrePaciente(c.getPaciente().getNombres())
+                .nombrePaciente(c.getPaciente().getNombres() + " " + c.getPaciente().getApellidoPaterno())
                 .dniPaciente(c.getPaciente().getNumeroDocumento())
+                .motivoConsulta(c.getMotivoConsultaPaciente()) // Nuevo campo
                 .linkReunion(c.getLinkReunion())
+                .precio(precio)        // Nuevo campo
+                .estadoPago(estadoPago) // Nuevo campo
                 .build();
+    }
+    // NUEVO MÉTODO: Agenda del Médico (Solo para rol MEDICO)
+    public List<CitaResponse> listarAgendaMedicoDelDia() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Buscamos el perfil médico asociado al usuario logueado
+        Medico medico = medicoRepository.findByPersonaUsuario(usuario)
+                .orElseThrow(() -> new RuntimeException("Este usuario no tiene perfil de Médico activo."));
+
+        // Definimos el rango "HOY"
+        LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
+        LocalDateTime finDia = LocalDate.now().atTime(LocalTime.MAX);
+
+        List<Cita> agenda = citaRepository.findByMedicoAndFechaHoraInicioBetweenOrderByFechaHoraInicioAsc(medico, inicioDia, finDia);
+
+        return agenda.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 }

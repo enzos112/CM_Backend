@@ -12,10 +12,11 @@ import java.util.List;
 
 public interface CitaRepository extends IGenericRepository<Cita, Integer> {
 
-    // Método 1: Validación rápida
+    // Método 1: Validación rápida para evitar doble agendamiento al guardar
     boolean existsByMedicoAndFechaHoraInicio(Medico medico, LocalDateTime fechaHoraInicio);
 
-    // Método 2: Pintar la grilla (Horas ocupadas)
+    // Método 2: Para pintar la grilla en el Frontend (Trae las horas ocupadas)
+    // Filtramos para no traer citas que hayan sido CANCELADAS
     @Query("SELECT c.fechaHoraInicio FROM Cita c " +
             "WHERE c.medico.idMedico = :medicoId " +
             "AND c.fechaHoraInicio BETWEEN :inicio AND :fin " +
@@ -37,4 +38,10 @@ public interface CitaRepository extends IGenericRepository<Cita, Integer> {
     // Búsqueda para el historial del paciente
     @Query("SELECT c FROM Cita c WHERE c.paciente.usuario.email = :email")
     List<Cita> findByPacienteUsuarioEmail(@Param("email") String email);
+
+    // NUEVO: Buscar citas de un médico en un rango (Agenda del Día)
+    // Usaremos esto para filtrar "HOY" (00:00 a 23:59)
+    List<Cita> findByMedicoAndFechaHoraInicioBetweenOrderByFechaHoraInicioAsc(
+            Medico medico, LocalDateTime start, LocalDateTime end
+    );
 }

@@ -30,7 +30,10 @@ public class DetalleOrden {
     private Integer cantidad;
     private BigDecimal subtotal;
 
+    // RELACIÓN DUEÑA CON CITA:
+    // Esto creará la columna física 'id_cita' en la tabla 'detalles_orden'.
+    // Usamos unique=true porque una cita solo puede estar en un detalle.
     @OneToOne
-    @JoinColumn(name = "id_cita")
+    @JoinColumn(name = "id_cita", referencedColumnName = "idCita")
     private Cita cita;
 }
