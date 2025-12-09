@@ -4,6 +4,9 @@ import com.medico.backend.model.core.Persona;
 import com.medico.backend.model.infrastructure.Medico;
 import com.medico.backend.repository.MedicoRepository;
 import com.medico.backend.repository.OrdenPagoRepository;
+
+import com.medico.backend.service.implementation.ReporteService;
+import org.springframework.http.ResponseEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +19,7 @@ public class AdminController {
 
     private final MedicoRepository medicoRepository;
     private final OrdenPagoRepository ordenPagoRepository;
+    private final ReporteService reporteService;
 
     // EDITAR MÉDICO
     @PutMapping("/medicos/{id}")
@@ -53,5 +57,22 @@ public class AdminController {
     @GetMapping("/resumen-ventas")
     public Double totalVentasHoy() {
         return ordenPagoRepository.sumByFecha(LocalDate.now());
+    }
+
+    // ENDPOINTS DE REPORTES
+
+    @GetMapping("/reporte/ingresos")
+    public ResponseEntity<?> reporteIngresos(@RequestParam int anio, @RequestParam int mes) {
+        return ResponseEntity.ok(reporteService.obtenerIngresosMensuales(anio, mes));
+    }
+
+    @GetMapping("/reporte/estados-citas")
+    public ResponseEntity<?> reporteEstadosCitas() {
+        return ResponseEntity.ok(reporteService.obtenerEstadisticasCitas());
+    }
+
+    @GetMapping("/reporte/top-medicos")
+    public ResponseEntity<?> reporteTopMedicos() {
+        return ResponseEntity.ok(reporteService.obtenerTop5Medicos());
     }
 }

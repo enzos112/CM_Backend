@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 public interface CitaRepository extends IGenericRepository<Cita, Integer> {
 
@@ -43,4 +44,15 @@ public interface CitaRepository extends IGenericRepository<Cita, Integer> {
             LocalDateTime inicio,
             LocalDateTime fin
     );
+
+    // REPORTE 2: Conteo de estados
+    @Query("SELECT c.estado, COUNT(c) FROM Cita c GROUP BY c.estado")
+    List<Object[]> contarCitasPorEstado();
+
+    // REPORTE 3: Top Médicos (Quien tiene más citas)
+    @Query("SELECT m.persona.nombres, m.persona.apellidoPaterno, COUNT(c) " +
+            "FROM Cita c JOIN c.medico m " +
+            "GROUP BY m.idMedico " +
+            "ORDER BY COUNT(c) DESC")
+    List<Object[]> encontrarTopMedicos(Pageable pageable);
 }
