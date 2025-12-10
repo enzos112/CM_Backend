@@ -60,19 +60,36 @@ public class AdminController {
     }
 
     // ENDPOINTS DE REPORTES
-
+    //R1
     @GetMapping("/reporte/ingresos")
     public ResponseEntity<?> reporteIngresos(@RequestParam int anio, @RequestParam int mes) {
         return ResponseEntity.ok(reporteService.obtenerIngresosMensuales(anio, mes));
     }
-
+    //R2
     @GetMapping("/reporte/estados-citas")
     public ResponseEntity<?> reporteEstadosCitas() {
         return ResponseEntity.ok(reporteService.obtenerEstadisticasCitas());
     }
-
+    //R3
     @GetMapping("/reporte/top-medicos")
     public ResponseEntity<?> reporteTopMedicos() {
         return ResponseEntity.ok(reporteService.obtenerTop5Medicos());
+    }
+    //R4 Endpoint Top Especialidades
+    @GetMapping("/top-especialidades")
+    public ResponseEntity<?> reporteTopEspecialidades() {
+        return ResponseEntity.ok(reporteService.obtenerTopEspecialidades());
+    }
+
+    //R5 Endpoint Crecimiento Pacientes
+    @GetMapping("/nuevos-pacientes")
+    public ResponseEntity<?> reporteNuevosPacientes() {
+        return ResponseEntity.ok(reporteService.obtenerCrecimientoPacientes());
+    }
+
+    //R6 Endpoint KPI Cancelaciones
+    @GetMapping("/tasa-cancelacion")
+    public ResponseEntity<?> reporteTasaCancelacion() {
+        return ResponseEntity.ok(reporteService.obtenerTasaCancelacion());
     }
 }
