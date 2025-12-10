@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.medico.backend.service.implementation.EmailService;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +35,8 @@ public class CitaService extends GenericService<Cita, Integer> {
     private final ModalidadCitaRepository modalidadCitaRepository;
     private final TarifaService tarifaService;
     private final OrdenPagoService ordenPagoService;
-    private final SolicitudCancelacionRepository solicitudRepo; // <--- NUEVO REPOSITORIO
+    private final SolicitudCancelacionRepository solicitudRepo;
+    private final EmailService emailService;
 
     @Override
     protected IGenericRepository<Cita, Integer> getRepo() {
@@ -76,6 +78,22 @@ public class CitaService extends GenericService<Cita, Integer> {
 
         // 5. Generar Orden
         ordenPagoService.generarOrdenPagoParaCita(citaGuardada, "PAGO_EN_CLINICA");
+
+        try {
+            // Verifica si tu compañera llamó al método "enviarConfirmacion" o "sendEmail"
+            // y ajusta los parámetros según lo que ella programó.
+            emailService.enviarConfirmacionCita(
+                    citaGuardada.getPaciente().getUsuario().getEmail(),
+                    citaGuardada.getPaciente().getNombres(),
+                    citaGuardada.getFechaHoraInicio().toString(),
+                    citaGuardada.getMedico().getPersona().getApellidoPaterno()
+            );
+            System.out.println("Correo enviado a: " + citaGuardada.getPaciente().getUsuario().getEmail());
+        } catch (Exception e) {
+            System.err.println("No se pudo enviar el correo: " + e.getMessage());
+            // No lanzamos error para no romper la transacción de la cita
+        }
+
         Cita citaActualizada = citaRepository.findById(citaGuardada.getIdCita()).orElse(citaGuardada);
 
         return mapToResponse(citaActualizada);

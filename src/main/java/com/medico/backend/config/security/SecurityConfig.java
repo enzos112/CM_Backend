@@ -34,7 +34,12 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         // 1. ZONA PÚBLICA (Login, Registro, Catálogos)
-                        .requestMatchers("/auth/**", "/catalogo/**").permitAll()
+                        .requestMatchers(
+                                "/auth/**",
+                                "/catalogo/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**" // Necesario para que Swagger lea el JSON
+                        ).permitAll()
 
                         // 2. ZONA CITAS (Reglas Específicas)
                         .requestMatchers("/citas/agenda-medico").hasAnyAuthority("MEDICO", "ADMIN")
@@ -47,6 +52,7 @@ public class SecurityConfig {
                         // 4. ZONA INTRANET (Módulos de tu Compañera) <--- ¡CORREGIDO AQUÍ!
                         // AdminController está en /intranet/admin
                         .requestMatchers("/intranet/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/intranet/pagos/**").hasAnyAuthority("ADMIN")
                         // MedicoDashboardController y Horarios están en /intranet/medico
                         .requestMatchers("/intranet/medico/**").hasAnyAuthority("MEDICO", "ADMIN")
 
