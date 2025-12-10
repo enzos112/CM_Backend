@@ -7,16 +7,17 @@ import com.medico.backend.model.privat.Rol;
 import com.medico.backend.model.privat.UsuarioRol;
 import com.medico.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // Import
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j // Activa logs
 public class DataSeeder implements CommandLineRunner {
 
     private final RolRepository rolRepository;
@@ -29,7 +30,7 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        System.out.println("--- INICIANDO CARGA DE DATOS MAESTROS ---");
+        log.info("🚀 INICIANDO CARGA DE DATOS MAESTROS...");
 
         // 1. ROLES
         crearRolSiNoExiste("ADMIN", "Administrador del Sistema");
@@ -40,7 +41,7 @@ public class DataSeeder implements CommandLineRunner {
         crearModalidadSiNoExiste("PRESENCIAL", "Cita en consultorio físico");
         crearModalidadSiNoExiste("VIRTUAL", "Cita por videollamada");
 
-        // 3. ESPECIALIDADES (Ejemplos)
+        // 3. ESPECIALIDADES
         crearEspecialidadSiNoExiste("Medicina General", "Atención primaria");
         crearEspecialidadSiNoExiste("Cardiología", "Enfermedades del corazón");
         crearEspecialidadSiNoExiste("Pediatría", "Atención a niños");
@@ -50,7 +51,7 @@ public class DataSeeder implements CommandLineRunner {
             Usuario admin = Usuario.builder()
                     .codigo("ADM-001")
                     .email("admin@medico.com")
-                    .password(passwordEncoder.encode("admin123")) // Contraseña segura
+                    .password(passwordEncoder.encode("admin123"))
                     .estadoCuenta("ACTIVO")
                     .fechaRegistro(LocalDateTime.now())
                     .build();
@@ -66,10 +67,12 @@ public class DataSeeder implements CommandLineRunner {
                     .build();
 
             usuarioRolRepository.save(ur);
-            System.out.println("✅ Usuario ADMIN creado: admin@medico.com / admin123");
+            log.info("✅ Usuario ADMIN creado: admin@medico.com / admin123");
+        } else {
+            log.info("👌 Usuario ADMIN ya existe. Omitiendo creación.");
         }
 
-        System.out.println("--- CARGA DE DATOS COMPLETADA ---");
+        log.info("🏁 CARGA DE DATOS COMPLETADA EXITOSAMENTE.");
     }
 
     private void crearRolSiNoExiste(String nombre, String descripcion) {
@@ -85,10 +88,6 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void crearEspecialidadSiNoExiste(String nombre, String descripcion) {
-        // Asumiendo que puedes buscar por nombre o simplemente cuentas
-        // Aquí simplificado: si no hay especialidades, creo estas.
-        // Ojo: Si tu repo no tiene findByNombre, podrías omitir la validación o agregarla.
-        // Por ahora, solo creamos si la tabla está vacía para no duplicar.
         if (especialidadRepository.count() == 0) {
             especialidadRepository.save(Especialidad.builder().nombre(nombre).descripcion(descripcion).iconoUrl("default.png").build());
         }

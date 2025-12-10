@@ -4,7 +4,7 @@ import com.medico.backend.dto.request.CitaRequest;
 import com.medico.backend.dto.response.CitaResponse;
 import com.medico.backend.model.administrative.Cita;
 import com.medico.backend.model.administrative.OrdenPago;
-import com.medico.backend.model.administrative.SolicitudCancelacion; // <--- NUEVO IMPORT
+import com.medico.backend.model.administrative.SolicitudCancelacion;
 import com.medico.backend.model.core.Persona;
 import com.medico.backend.model.core.Usuario;
 import com.medico.backend.model.infrastructure.Medico;
@@ -12,6 +12,7 @@ import com.medico.backend.model.infrastructure.ModalidadCita;
 import com.medico.backend.model.infrastructure.Tarifa;
 import com.medico.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // Importante para los logs
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +23,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import com.medico.backend.service.implementation.EmailService;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j // Activa la variable 'log'
 public class CitaService extends GenericService<Cita, Integer> {
 
     private final CitaRepository citaRepository;
@@ -45,18 +46,23 @@ public class CitaService extends GenericService<Cita, Integer> {
 
     @Transactional
     public CitaResponse agendarCita(CitaRequest request) {
-        // ... (Tu lógica de agendar se mantiene IGUAL) ...
         // 1. Obtener usuario
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Usuario usuario = usuarioRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        Persona paciente = personaRepository.findByUsuario(usuario).orElseThrow(() -> new RuntimeException("El usuario no tiene perfil de paciente"));
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        Persona paciente = personaRepository.findByUsuario(usuario)
+                .orElseThrow(() -> new RuntimeException("El usuario no tiene perfil de paciente"));
 
         // 2. Buscar Médico y Modalidad
-        Medico medico = medicoRepository.findById(request.getMedicoId()).orElseThrow(() -> new RuntimeException("Médico no encontrado"));
-        ModalidadCita modalidad = modalidadCitaRepository.findById(request.getModalidadId()).orElseThrow(() -> new RuntimeException("Modalidad no encontrada"));
+        Medico medico = medicoRepository.findById(request.getMedicoId())
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
+        ModalidadCita modalidad = modalidadCitaRepository.findById(request.getModalidadId())
+                .orElseThrow(() -> new RuntimeException("Modalidad no encontrada"));
 
         // 3. Tarifa y Disponibilidad
-        Tarifa tarifa = tarifaService.buscarTarifaActiva(medico.getEspecialidad(), modalidad).orElseThrow(() -> new RuntimeException("No hay tarifa activa."));
+        Tarifa tarifa = tarifaService.buscarTarifaActiva(medico.getEspecialidad(), modalidad)
+                .orElseThrow(() -> new RuntimeException("No hay tarifa activa."));
+
         if (citaRepository.existsByMedicoAndFechaHoraInicio(medico, request.getFechaHora())) {
             throw new RuntimeException("El médico ya tiene una cita en ese horario.");
         }
@@ -74,28 +80,27 @@ public class CitaService extends GenericService<Cita, Integer> {
                 .motivoConsultaPaciente(request.getMotivoConsulta())
                 .origenReserva("WEB")
                 .build();
+
         Cita citaGuardada = citaRepository.save(cita);
 
         // 5. Generar Orden
         ordenPagoService.generarOrdenPagoParaCita(citaGuardada, "PAGO_EN_CLINICA");
 
+        // --- INTEGRACIÓN DE CORREO CON LOGS ---
         try {
-            // Verifica si tu compañera llamó al método "enviarConfirmacion" o "sendEmail"
-            // y ajusta los parámetros según lo que ella programó.
             emailService.enviarConfirmacionCita(
                     citaGuardada.getPaciente().getUsuario().getEmail(),
                     citaGuardada.getPaciente().getNombres(),
                     citaGuardada.getFechaHoraInicio().toString(),
                     citaGuardada.getMedico().getPersona().getApellidoPaterno()
             );
-            System.out.println("Correo enviado a: " + citaGuardada.getPaciente().getUsuario().getEmail());
+            log.info("📧 Correo enviado exitosamente a: {}", citaGuardada.getPaciente().getUsuario().getEmail());
         } catch (Exception e) {
-            System.err.println("No se pudo enviar el correo: " + e.getMessage());
+            log.error("⚠️ Falló el envío de correo para la cita {}: {}", citaGuardada.getCodigo(), e.getMessage());
             // No lanzamos error para no romper la transacción de la cita
         }
 
         Cita citaActualizada = citaRepository.findById(citaGuardada.getIdCita()).orElse(citaGuardada);
-
         return mapToResponse(citaActualizada);
     }
 
@@ -108,7 +113,6 @@ public class CitaService extends GenericService<Cita, Integer> {
     }
 
     public List<CitaResponse> listarAgendaMedico(LocalDate fecha) {
-        // (Tu lógica de agenda médico se mantiene IGUAL)
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         Medico medico = medicoRepository.findByUsuario(usuario).orElseThrow(() -> new RuntimeException("No eres médico."));
@@ -123,23 +127,19 @@ public class CitaService extends GenericService<Cita, Integer> {
 
     // --- NUEVA LÓGICA DE CANCELACIÓN (SOLICITUDES) ---
 
-    // 1. PACIENTE: Solicita la cancelación
     @Transactional
     public void solicitarCancelacion(Integer idCita, String motivo, String evidenciaUrl) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         Cita cita = citaRepository.findById(idCita).orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        // Validar titularidad
         if (!cita.getPaciente().getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) {
             throw new RuntimeException("Solo el paciente titular puede solicitar la cancelación.");
         }
-        // Validar estado
         if (!"PENDIENTE".equals(cita.getEstado())) {
             throw new RuntimeException("Solo se pueden solicitar cancelaciones de citas PENDIENTES.");
         }
 
-        // Crear Solicitud
         SolicitudCancelacion solicitud = SolicitudCancelacion.builder()
                 .cita(cita)
                 .usuarioSolicitante(usuario)
@@ -149,12 +149,12 @@ public class CitaService extends GenericService<Cita, Integer> {
 
         solicitudRepo.save(solicitud);
 
-        // Bloquear Cita temporalmente
         cita.setEstado("EN_EVALUACION");
         citaRepository.save(cita);
+
+        log.info("📝 Solicitud de cancelación creada para la cita: {}", cita.getCodigo());
     }
 
-    // 2. ADMIN/MÉDICO: Aprueba o Rechaza
     @Transactional
     public void evaluarSolicitud(Integer idSolicitud, boolean aprobado, String respuestaAdmin) {
         SolicitudCancelacion solicitud = solicitudRepo.findById(idSolicitud)
@@ -164,22 +164,22 @@ public class CitaService extends GenericService<Cita, Integer> {
         solicitud.setRespuestaAdmin(respuestaAdmin);
 
         if (aprobado) {
-            // APROBADO: Cancelamos cita y deuda
             solicitud.setEstadoSolicitud("APROBADA");
             cita.setEstado("CANCELADO");
 
             if (cita.getDetalleOrden() != null && cita.getDetalleOrden().getOrdenPago() != null) {
                 OrdenPago orden = cita.getDetalleOrden().getOrdenPago();
                 if ("PAGADO".equals(orden.getEstado())) {
-                    orden.setEstado("REEMBOLSO_PENDIENTE"); // Si ya pagó
+                    orden.setEstado("REEMBOLSO_PENDIENTE");
                 } else {
-                    orden.setEstado("ANULADO"); // Si no ha pagado
+                    orden.setEstado("ANULADO");
                 }
             }
+            log.info("✅ Solicitud APROBADA. Cita {} cancelada.", cita.getCodigo());
         } else {
-            // RECHAZADO: La cita sigue en pie
             solicitud.setEstadoSolicitud("RECHAZADA");
             cita.setEstado("PENDIENTE");
+            log.info("❌ Solicitud RECHAZADA. Cita {} restaurada a PENDIENTE.", cita.getCodigo());
         }
 
         solicitudRepo.save(solicitud);

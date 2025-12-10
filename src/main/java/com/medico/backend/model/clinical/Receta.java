@@ -1,5 +1,6 @@
 package com.medico.backend.model.clinical;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.medico.backend.util.GeneradorCodigo;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class Receta {
 
     @ManyToOne
     @JoinColumn(name = "id_atencion")
+    @JsonIgnore // <--- AGREGAR ESTO
     private Atencion atencion;
 
     private LocalDateTime fechaEmision;

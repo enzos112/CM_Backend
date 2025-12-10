@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value; // <--- IMPORTANTE
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -18,25 +19,19 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // CLAVE SECRETA (En producción esto va en variables de entorno)
-    private static final String SECRET_KEY = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
+    // 1. INYECCIÓN DE LA CLAVE (Ya no es static final)
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    // --- MODIFICACIÓN AQUÍ ---
-    // Sobrecargamos para inyectar el ROL automáticamente en los claims
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
-
-        // Obtenemos el primer rol que tenga el usuario (Ej: "PACIENTE")
         String role = userDetails.getAuthorities().stream()
                 .findFirst()
                 .map(GrantedAuthority::getAuthority)
                 .orElse("USER");
-
-        extraClaims.put("role", role); // Guardamos "role": "PACIENTE" dentro del token
-
+        extraClaims.put("role", role);
         return generateToken(extraClaims, userDetails);
     }
-    // -------------------------
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
@@ -48,6 +43,7 @@ public class JwtService {
                 .compact();
     }
 
+    // ... (Los métodos isTokenValid, extractUsername, etc. siguen IGUAL) ...
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
@@ -79,7 +75,8 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+        // 2. USAR LA VARIABLE INYECTADA (this.secretKey)
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -1,5 +1,6 @@
 package com.medico.backend.model.administrative;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.medico.backend.model.core.Usuario;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,7 @@ public class SolicitudCancelacion {
     // RELACIÓN 1:1 CON CITA (Dueña de la relación)
     @OneToOne
     @JoinColumn(name = "id_cita", nullable = false, unique = true)
+    @JsonIgnore // <--- AGREGAR ESTO
     private Cita cita;
 
     // RELACIÓN N:1 CON USUARIO (Quién solicita)

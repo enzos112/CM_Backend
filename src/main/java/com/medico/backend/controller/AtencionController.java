@@ -3,6 +3,7 @@ package com.medico.backend.controller;
 import com.medico.backend.dto.request.AtencionRequest;
 import com.medico.backend.model.clinical.Atencion;
 import com.medico.backend.service.implementation.AtencionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class AtencionController {
     private final AtencionService atencionService;
 
     @PostMapping("/registrar")
-    public ResponseEntity<Atencion> registrarAtencion(@RequestBody AtencionRequest request) {
+    public ResponseEntity<Atencion> registrarAtencion(@Valid @RequestBody AtencionRequest request) { // <--- AQUÍ
         return ResponseEntity.ok(atencionService.registrarAtencion(request));
     }
 

@@ -1,5 +1,6 @@
 package com.medico.backend.model.clinical;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ public class SignoVital {
 
     @ManyToOne
     @JoinColumn(name = "id_atencion")
+    @JsonIgnore // <--- AGREGAR ESTO
     private Atencion atencion;
 
     // Opcionales (pueden ser nulos en citas virtuales)

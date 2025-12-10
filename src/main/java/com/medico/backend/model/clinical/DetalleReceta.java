@@ -1,5 +1,6 @@
 package com.medico.backend.model.clinical;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class DetalleReceta {
 
     @ManyToOne
     @JoinColumn(name = "id_receta")
+    @JsonIgnore // <--- AGREGAR ESTO
     private Receta receta;
 
     @Column(length = 100)

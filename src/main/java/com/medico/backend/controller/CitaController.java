@@ -4,6 +4,7 @@ import com.medico.backend.dto.request.CitaRequest;
 import com.medico.backend.dto.response.CitaResponse;
 import com.medico.backend.repository.CitaRepository;
 import com.medico.backend.service.implementation.CitaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +25,7 @@ public class CitaController {
     private final CitaRepository citaRepository;
 
     @PostMapping("/agendar")
-    public ResponseEntity<CitaResponse> agendar(@RequestBody CitaRequest request) {
+    public ResponseEntity<CitaResponse> agendar(@Valid @RequestBody CitaRequest request) { // <--- AQUÍ
         return ResponseEntity.ok(citaService.agendarCita(request));
     }
 

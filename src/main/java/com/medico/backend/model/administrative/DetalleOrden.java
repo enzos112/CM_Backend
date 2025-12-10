@@ -1,5 +1,6 @@
 package com.medico.backend.model.administrative;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,7 @@ public class DetalleOrden {
 
     @ManyToOne
     @JoinColumn(name = "id_orden", nullable = false)
+    @JsonIgnore // <--- AGREGAR ESTO
     private OrdenPago ordenPago;
 
     @Column(length = 20)
