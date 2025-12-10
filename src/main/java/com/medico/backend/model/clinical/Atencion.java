@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList; // Importante para inicializar
 
 @Data
 @Entity
@@ -17,7 +18,7 @@ public class Atencion {
     private Integer idAtencion;
 
     @Column(unique = true, nullable = false, length = 20)
-    private String codigo; // AT-XXX-XXXXX
+    private String codigo;
 
     @OneToOne
     @JoinColumn(name = "id_cita")
@@ -50,8 +51,14 @@ public class Atencion {
     private String planTratamiento;
     private String pronostico;
 
+    // Relación con Signos Vitales
     @OneToMany(mappedBy = "atencion", cascade = CascadeType.ALL)
     private List<SignoVital> signosVitales;
+
+    // --- NUEVO: Relación Inversa con Recetas ---
+    // Esto permite hacer atencion.getRecetas()
+    @OneToMany(mappedBy = "atencion", cascade = CascadeType.ALL)
+    private List<Receta> recetas = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

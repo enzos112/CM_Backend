@@ -33,21 +33,30 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. PÚBLICO
+                        // 1. ZONA PÚBLICA (Login, Registro, Catálogos)
                         .requestMatchers("/auth/**", "/catalogo/**").permitAll()
 
-                        // 2. REGLAS DE CITAS Y MÉDICO
+                        // 2. ZONA CITAS (Reglas Específicas)
                         .requestMatchers("/citas/agenda-medico").hasAnyAuthority("MEDICO", "ADMIN")
                         .requestMatchers("/citas/horarios-ocupados").hasAnyAuthority("PACIENTE", "MEDICO", "ADMIN")
-                        .requestMatchers("/citas/**").hasAnyAuthority("PACIENTE", "ADMIN")
 
-                        // 3. NUEVAS REGLAS DE SOLICITUDES DE CANCELACIÓN
+                        // 3. SOLICITUDES DE CANCELACIÓN (Tu Módulo)
                         .requestMatchers("/solicitudes/crear").hasAnyAuthority("PACIENTE")
                         .requestMatchers("/solicitudes/pendientes", "/solicitudes/*/resolver").hasAnyAuthority("MEDICO", "ADMIN")
 
-                        // 4. GENERALES
-                        .requestMatchers("/medico/**").hasAnyAuthority("MEDICO", "ADMIN")
-                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                        // 4. ZONA INTRANET (Módulos de tu Compañera) <--- ¡CORREGIDO AQUÍ!
+                        // AdminController está en /intranet/admin
+                        .requestMatchers("/intranet/admin/**").hasAuthority("ADMIN")
+                        // MedicoDashboardController y Horarios están en /intranet/medico
+                        .requestMatchers("/intranet/medico/**").hasAnyAuthority("MEDICO", "ADMIN")
+
+                        // 5. ZONA WEB PACIENTE (PerfilPacienteController) <--- ¡FALTABA ESTO!
+                        .requestMatchers("/web/**").hasAuthority("PACIENTE")
+
+                        // 6. GENERALES (Para endpoints viejos que no tengan prefijo)
+                        .requestMatchers("/citas/**").hasAnyAuthority("PACIENTE", "ADMIN")
+
+                        .requestMatchers("/intranet/medico/atencion/**").hasAnyAuthority("MEDICO")
 
                         .anyRequest().authenticated()
                 )
