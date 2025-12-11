@@ -64,6 +64,10 @@ public class SecurityConfig {
 
                         .requestMatchers("/intranet/medico/atencion/**").hasAnyAuthority("MEDICO")
 
+                        // 7. PERFIL DE USUARIO (Para que el paciente pueda editar sus datos)
+                        .requestMatchers("/usuario/**").hasAnyAuthority("PACIENTE", "MEDICO", "ADMIN")
+
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess

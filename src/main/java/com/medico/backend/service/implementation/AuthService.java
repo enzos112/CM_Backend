@@ -3,6 +3,7 @@ package com.medico.backend.service.implementation;
 import com.medico.backend.config.security.JwtService;
 import com.medico.backend.dto.request.LoginRequest;
 import com.medico.backend.dto.request.RegisterRequest;
+import com.medico.backend.dto.request.UpdateProfileRequest;
 import com.medico.backend.dto.response.AuthResponse;
 import com.medico.backend.model.core.Persona;
 import com.medico.backend.model.core.Usuario;
@@ -18,6 +19,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -104,5 +107,79 @@ public class AuthService {
         return AuthResponse.builder()
                 .token(jwtToken)
                 .build();
+    }
+
+    @Transactional
+    public AuthResponse updateProfile(UpdateProfileRequest request) {
+        // 1. Obtener el email del usuario autenticado desde el contexto de seguridad
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // 2. Buscar Usuario y Persona
+        Usuario user = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Persona persona = personaRepository.findByUsuario(user)
+                .orElseThrow(() -> new RuntimeException("Persona asociada no encontrada"));
+
+        // 3. Actualizar SOLO los campos permitidos (si vienen en el request)
+        if (request.getTelefonoMovil() != null) {
+            persona.setTelefonoMovil(request.getTelefonoMovil());
+        }
+        if (request.getDireccionCalle() != null) {
+            persona.setDireccionCalle(request.getDireccionCalle());
+        }
+        if (request.getContactoEmergenciaNombre() != null) {
+            persona.setContactoEmergenciaNombre(request.getContactoEmergenciaNombre());
+        }
+        if (request.getContactoEmergenciaTelefono() != null) {
+            persona.setContactoEmergenciaTelefono(request.getContactoEmergenciaTelefono());
+        }
+
+        // 4. Guardar cambios en BD
+        personaRepository.save(persona);
+
+        // 5. ¡CRUCIAL! Generar un NUEVO TOKEN con los datos actualizados
+        // (El JwtService buscará de nuevo a la persona y verá los cambios)
+        var newToken = jwtService.generateToken(user);
+
+        return AuthResponse.builder().token(newToken).build();
+    }
+
+    // Añadir al final de AuthService.java
+    @Transactional
+    public void changePassword(String newPassword) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        Usuario user = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Encriptamos la nueva clave antes de guardarla
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        usuarioRepository.save(user);
+    }
+
+    // Añadir en AuthService.java
+
+    @Transactional
+    public AuthResponse changeEmail(com.medico.backend.dto.request.ChangeEmailRequest request) {
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // 1. Verificar que el nuevo email no esté ocupado por OTRA persona
+        if (usuarioRepository.findByEmail(request.getNewEmail()).isPresent()) {
+            throw new RuntimeException("El correo ya está en uso por otro usuario.");
+        }
+
+        Usuario user = usuarioRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // 2. Actualizar Email
+        user.setEmail(request.getNewEmail());
+        usuarioRepository.save(user);
+
+        // 3. Generar NUEVO TOKEN (Fundamental porque el token anterior tenía el email viejo)
+        var newToken = jwtService.generateToken(user);
+
+        return AuthResponse.builder().token(newToken).build();
     }
 }
