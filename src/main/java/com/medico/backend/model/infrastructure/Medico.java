@@ -29,6 +29,10 @@ public class Medico {
     @JoinColumn(name = "id_especialidad", nullable = false)
     private Especialidad especialidad;
 
+    @ManyToOne
+    @JoinColumn(name = "id_modalidad", nullable = false)
+    private ModalidadCita modalidad;
+
     @Column(unique = true, length = 20)
     private String cmp;
 

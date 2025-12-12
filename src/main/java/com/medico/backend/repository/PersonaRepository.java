@@ -12,7 +12,7 @@ public interface PersonaRepository extends IGenericRepository<Persona, Integer> 
     // Validar si el DNI ya existe
     boolean existsByNumeroDocumento(String numeroDocumento);
 
-
+    Optional<Persona> findByNumeroDocumento(String numeroDocumento);
     Optional<Persona> findByUsuarioEmail(String email);
 
 }

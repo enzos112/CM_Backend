@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class CitaRequest {
 
-    @NotNull(message = "Debes seleccionar un médico (ID obligatorio)")
+    @NotNull(message = "Debes seleccionar un médico")
     private Integer medicoId;
 
     @NotNull(message = "La fecha y hora son obligatorias")
@@ -19,12 +19,21 @@ public class CitaRequest {
     @NotNull(message = "La modalidad es obligatoria")
     private Integer modalidadId;
 
-    private boolean esParaTercero;
-    private String pacienteNombre;
-    private String pacienteDni;
-    private String pacienteTelefono;
+    private String distrito;
+    private String direccionExacta;
+    private String referencia;
 
-    private String motivoConsulta; // Opcional al agendar
+    // --- DATOS PARA TERCEROS (Actualizado según Prototipo) ---
+    private boolean esParaTercero;
+
+    private String pacienteNombre;    // "Nombres" en el formulario
+    private String pacienteApellido;  // <--- NUEVO: "Apellidos"
+    private String pacienteDni;       // "DNI"
+    private String pacienteEmail;     // <--- NUEVO: "Correo electrónico"
+    private String pacienteTelefono;  // "Número de teléfono"
+
+    // Datos médicos opcionales
+    private String motivoConsulta;
     private BigDecimal peso;
     private BigDecimal altura;
     private String alergias;

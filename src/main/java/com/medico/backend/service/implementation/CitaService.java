@@ -46,28 +46,54 @@ public class CitaService extends GenericService<Cita, Integer> {
 
     @Transactional
     public CitaResponse agendarCita(CitaRequest request) {
-        // 1. Obtener usuario
+        // 1. Obtener usuario autenticado (Quien paga/agenda)
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        Usuario usuarioTitular = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        Persona paciente = personaRepository.findByUsuario(usuario)
-                .orElseThrow(() -> new RuntimeException("El usuario no tiene perfil de paciente"));
 
-        // 2. Buscar Médico y Modalidad
-        Medico medico = medicoRepository.findById(request.getMedicoId())
-                .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
-        ModalidadCita modalidad = modalidadCitaRepository.findById(request.getModalidadId())
-                .orElseThrow(() -> new RuntimeException("Modalidad no encontrada"));
+        // 2. Definir quién es el PACIENTE
+        Persona paciente;
 
-        // 3. Tarifa y Disponibilidad
-        Tarifa tarifa = tarifaService.buscarTarifaActiva(medico.getEspecialidad(), modalidad)
-                .orElseThrow(() -> new RuntimeException("No hay tarifa activa."));
-
-        if (citaRepository.existsByMedicoAndFechaHoraInicio(medico, request.getFechaHora())) {
-            throw new RuntimeException("El médico ya tiene una cita en ese horario.");
+        if (request.isEsParaTercero()) {
+            // LÓGICA DE TERCERO:
+            // Buscamos si ya existe una persona con ese DNI, si no, la creamos.
+            paciente = personaRepository.findByNumeroDocumento(request.getPacienteDni())
+                    .orElseGet(() -> {
+                        // Crear nueva persona (sin usuario asociado, solo ficha médica)
+                        Persona nuevaPersona = Persona.builder()
+                                .nombres(request.getPacienteNombre())
+                                .apellidoPaterno(request.getPacienteApellido()) // Asegúrate de tener este campo en Persona
+                                .tipoDocumento("DNI")
+                                .numeroDocumento(request.getPacienteDni())
+                                .telefonoMovil(request.getPacienteTelefono())
+                                // .email(request.getPacienteEmail()) // Si tienes email en Persona, agrégalo
+                                .build();
+                        return personaRepository.save(nuevaPersona);
+                    });
+        } else {
+            // LÓGICA TITULAR:
+            // El paciente es el mismo usuario logueado
+            paciente = personaRepository.findByUsuario(usuarioTitular)
+                    .orElseThrow(() -> new RuntimeException("El usuario titular no tiene perfil de persona creado."));
         }
 
-        // 4. Crear Cita
+        // 3. Buscar Médico y Modalidad
+        Medico medico = medicoRepository.findById(request.getMedicoId())
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
+
+        ModalidadCita modalidad = modalidadCitaRepository.findById(request.getModalidadId())
+                .orElseThrow(() -> new RuntimeException("Modalidad no encontrada (ID: " + request.getModalidadId() + ")"));
+
+        // 4. Validar Disponibilidad
+        if (citaRepository.existsByMedicoAndFechaHoraInicio(medico, request.getFechaHora())) {
+            throw new RuntimeException("El médico ya tiene una cita ocupada en ese horario.");
+        }
+
+        // 5. Buscar Tarifa
+        Tarifa tarifa = tarifaService.buscarTarifaActiva(medico.getEspecialidad(), modalidad)
+                .orElseThrow(() -> new RuntimeException("No hay tarifa configurada para esta especialidad/modalidad."));
+
+        // 6. Crear Cita
         Cita cita = Cita.builder()
                 .paciente(paciente)
                 .medico(medico)
@@ -75,33 +101,42 @@ public class CitaService extends GenericService<Cita, Integer> {
                 .modalidad(modalidad)
                 .tarifa(tarifa)
                 .fechaHoraInicio(request.getFechaHora())
-                .fechaHoraFin(request.getFechaHora().plusMinutes(30))
+                .fechaHoraFin(request.getFechaHora().plusMinutes(30)) // Citas de 30 min por defecto
                 .estado("PENDIENTE")
                 .motivoConsultaPaciente(request.getMotivoConsulta())
+
+                // --- MAPEO DE DIRECCIÓN ---
+                // Solo guardamos esto si es Domicilio (ID 2), si no, se guarda nulo para no ensuciar la BD
+                .distrito(request.getModalidadId() == 2 ? request.getDistrito() : null)
+                .direccionExacta(request.getModalidadId() == 2 ? request.getDireccionExacta() : null)
+                .referencia(request.getModalidadId() == 2 ? request.getReferencia() : null)
+
                 .origenReserva("WEB")
                 .build();
 
         Cita citaGuardada = citaRepository.save(cita);
 
-        // 5. Generar Orden
-        ordenPagoService.generarOrdenPagoParaCita(citaGuardada, "PAGO_EN_CLINICA");
+        // 7. Generar Orden de Pago
+        ordenPagoService.generarOrdenPagoParaCita(citaGuardada, "PAGO_EN_CLINICA"); // Ojo: Aquí podrías usar request.getTipoPago() si lo envías
 
-        // --- INTEGRACIÓN DE CORREO CON LOGS ---
+        // 8. Enviar Correo
         try {
+            // Enviamos correo al email que puso en el formulario (si es tercero) o al del titular
+            String emailNotificacion = request.isEsParaTercero() ? request.getPacienteEmail() : usuarioTitular.getEmail();
+
             emailService.enviarConfirmacionCita(
-                    citaGuardada.getPaciente().getUsuario().getEmail(),
-                    citaGuardada.getPaciente().getNombres(),
+                    emailNotificacion,
+                    paciente.getNombres(),
                     citaGuardada.getFechaHoraInicio().toString(),
                     citaGuardada.getMedico().getPersona().getApellidoPaterno()
             );
-            log.info("📧 Correo enviado exitosamente a: {}", citaGuardada.getPaciente().getUsuario().getEmail());
         } catch (Exception e) {
-            log.error("⚠️ Falló el envío de correo para la cita {}: {}", citaGuardada.getCodigo(), e.getMessage());
-            // No lanzamos error para no romper la transacción de la cita
+            log.error("Error enviando correo: {}", e.getMessage());
         }
 
-        Cita citaActualizada = citaRepository.findById(citaGuardada.getIdCita()).orElse(citaGuardada);
-        return mapToResponse(citaActualizada);
+        // Retornar respuesta
+        // Nota: Asegúrate de refrescar la entidad para traer relaciones completas
+        return mapToResponse(citaGuardada);
     }
 
     public List<CitaResponse> listarMisCitas() {

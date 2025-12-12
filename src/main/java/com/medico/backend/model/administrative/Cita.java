@@ -64,6 +64,16 @@ public class Cita {
     private String linkReunion;
     private String origenReserva;
 
+    // --- NUEVOS CAMPOS PARA DOMICILIO ---
+    @Column(length = 50)
+    private String distrito; // Ej: "Victor Larco", "Huanchaco"
+
+    @Column(length = 150)
+    private String direccionExacta; // Ej: "Av. Larco 123, Dpto 402"
+
+    @Column(length = 100)
+    private String referencia; // Ej: "Frente al parque de las aguas"
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
